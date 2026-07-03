@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NotebookLM 學習卡與測驗轉換王 Pro</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel Standalone CDN -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        html, body, #root {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f1f5f9;
+        }
+        /* 嚴格滿版防止雙捲軸 */
+        .app-container {
+            height: 100%;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        /* 卡片翻轉效果 */
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+        .transform-style-3d {
+            transform-style: preserve-3d;
+        }
+        .backface-hidden {
+            backface-visibility: hidden;
+        }
+        .rotate-y-180 {
+            transform: rotateY(180deg);
+        }
+        /* 自訂精細捲軸 */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        // 整合「學習卡.csv」與「學習卡2.csv」之去重專業考題資料庫 (共 32 題)
+        const combinedDatabase = [
+            { id: 1, question: "CT 檢查基本流程的五大核心步驟？", answer: "1.確認醫囑 2.病人確認 3.檢查前準備 4.掃描執行 5.檢查後處理。", topic: "檢查流程" },
+            { id: 2, question: "在「確認醫囑（Order）」階段需核對哪三項？", answer: "檢查部位、是否使用對比劑、特殊需求（如急診/ICU/危急病人）。", topic: "檢查流程" },
+            { id: 3, question: "「病人確認」時需核對哪些身分資訊？", answer: "姓名、出生年月日（透過健保卡或手圈核對）。", topic: "檢查流程" },
+            { id: 4, question: "「病人確認」階段需詢問的過敏與病史？", answer: "對比劑過敏史、糖尿病或氣喘病史。", topic: "檢查流程" },
+            { id: 5, question: "「病人確認」時關於糖尿病藥物的特定重點？", answer: "Ref: Metformin。需確認病人是否正在使用 Metformin，並依醫囑評估停藥與否。", topic: "檢查流程" },
+            { id: 6, question: "「檢查前準備」關於著裝的規定？", answer: "去除金屬物品（如項鍊、拉鍊、內衣扣等）並更換檢查衣，避免產生人工假影。", topic: "檢查流程" },
+            { id: 7, question: "檢查前告知病人「禁食」的目的為何？", answer: "確保檢查安全及影像品質（預防注射對比劑引發嘔吐導致吸入性肺炎）。", topic: "檢查流程" },
+            { id: 8, question: "檢查前告知病人「喝水」或「漲尿」的目的？", answer: "協助區分腸胃道與周邊組織，或充盈膀胱以利骨盆腔結構診斷。", topic: "檢查流程" },
+            { id: 9, question: "什麼情況下需要建立 IV 靜脈路徑？", answer: "當檢查需要高壓注射器配合使用對比劑（Contrast agent）時。", topic: "檢查流程" },
+            { id: 10, question: "「掃描執行」中關於定位（Scout）的要點？", answer: "需確認各部位的定位點（Landmark）與正確覆蓋範圍。", topic: "檢查流程" },
+            { id: 11, question: "「掃描執行」中放射師需設定哪些軟體細節？", answer: "選擇對應的 Protocol（掃描條件）、設定精確的掃描範圍與切片參數。", topic: "檢查流程" },
+            { id: 12, question: "掃描執行時需對病人進行什麼溝通？", answer: "解釋呼吸配合（如吸氣、憋氣指令），以減少呼吸運動造成的假影。", topic: "檢查流程" },
+            { id: 13, question: "「檢查後處理」包含哪些影像重建技術？", answer: "MPR（多平面重建）、MIP（最大強度投影）與 3D 容積渲染重建。", topic: "檢查流程" },
+            { id: 14, question: "重建後的影像最終需傳送到哪裡？", answer: "影像需即時傳送至 PACS（醫療影像儲傳系統）供醫師閱卷報告。", topic: "檢查流程" },
+            { id: 15, question: "CT 室輻射安全應遵守的核心原則？", answer: "遵守 ALARA 原則（追求儘可能低的合理達成劑量），並視需要對非檢查部位穿戴鉛衣防護。", topic: "輻射安全" },
+            { id: 16, question: "哪一類特殊群體在進行 CT 檢查前需特別確認？", answer: "育齡婦女或確定懷孕之孕婦（需極力評估臨床效益與輻射風險）。", topic: "輻射安全" },
+            { id: 17, question: "對比劑安全性：碘對比劑可能引發的風險？", answer: "可能引起不同程度的過敏反應（輕微如發熱、嘔吐；嚴重如休克）。", topic: "對比劑安全" },
+            { id: 18, question: "對比劑安全性：臨床上如何評估病人腎功能？", answer: "抽血查詢 eGFR（腎絲球過濾率）指標，確保病人具有代謝對比劑之能力。", topic: "對比劑安全" },
+            { id: 19, question: "對比劑安全性：注射過程中需特別防範的情況？", answer: "注意對比劑滲漏（Extravasation），應立即停止注射並依指引處理。", topic: "對比劑安全" },
+            { id: 20, question: "緊急狀況處理：常見的過敏反應症狀有哪些？", answer: "局部或全身性蕁麻疹、皮膚搔癢、呼吸困難、喉頭水腫等。", topic: "緊急狀況" },
+            { id: 21, question: "常見檢查類型：列舉四種人體部位的 CT 檢查？", answer: "頭部 CT (Brain)、頸部 CT (Neck)、胸部 CT (Chest)、腹部 CT (Abdomen)。", topic: "常見檢查類型" },
+            { id: 22, question: "常見檢查類型：專門針對血管的 CT 檢查稱為？", answer: "CT 血管攝影，簡稱 CTA（CT Angiography）。", topic: "常見檢查類型" },
+            { id: 23, question: "對比劑目的：對血管與組織的主要作用？", answer: "提高血管與病變組織之間的對比度（Contrast），使病灶顯影更清晰。", topic: "對比劑概念" },
+            { id: 24, question: "給藥方式：對比劑最常見的進入途徑？", answer: "透過高壓注射器進行靜脈注射（IV injection）。", topic: "對比劑概念" },
+            { id: 25, question: "技術細節：CTA 檢查中採用的關鍵偵測技術？", answer: "Bolus tracking 技術（藉由設定 ROI 偵測主動脈顯影到達閾值後自動觸發掃描）。", topic: "對比劑概念" },
+            { id: 26, question: "對比劑注射監控：除了速度，還需監控什麼？", answer: "監控注射壓力（Pressure Limits），防止高壓導致血管破裂或管路脫落。", topic: "對比劑概念" },
+            { id: 27, question: "縮寫必背：CTA 的全稱？", answer: "CT Angiography（電腦斷層血管攝影）。", topic: "常用縮寫" },
+            { id: 28, question: "縮寫必背：MPR 的全稱？", answer: "Multiplanar Reconstruction（多平面重建）。", topic: "常用縮寫" },
+            { id: 29, question: "縮寫必背：MPR 重建包含哪兩個主要切面？", answer: "COR（Coronal，冠狀面）與 SAG（Sagittal，矢狀面）。", topic: "常用縮寫" },
+            { id: 30, question: "縮寫必背：MIP 的全稱？", answer: "Maximum Intensity Projection（最大強度投影）。", topic: "常用縮寫" },
+            { id: 31, question: "縮寫必背：CTDI 與 DLP 的用途？", answer: "皆為與輻射劑量監測、計算及記錄相關的核心參數。", topic: "常用縮寫" },
+            { id: 32, question: "縮寫必背：eGFR 的中文名稱？", answer: "腎絲球過濾率（Estimated Glomerular Filtration Rate）。", topic: "常用縮寫" }
+        ];
+
+        function App() {
+            const [activeTab, setActiveTab] = useState('cards');
+            
+            // 透過 Mock Data 模擬持久化資料庫
+            const [cards, setCards] = useState(() => {
+                const saved = localStorage.getItem('ct_master_cards');
+                return saved ? JSON.parse(saved) : combinedDatabase.map(c => ({ ...c, status: 'unlearned' }));
+            });
+
+            const [quizHistory, setQuizHistory] = useState(() => {
+                const saved = localStorage.getItem('ct_master_history');
+                return saved ? JSON.parse(saved) : [];
+            });
+
+            useEffect(() => {
+                localStorage.setItem('ct_master_cards', JSON.stringify(cards));
+            }, [cards]);
+
+            useEffect(() => {
+                localStorage.setItem('ct_master_history', JSON.stringify(quizHistory));
+            }, [quizHistory]);
+
+            // 自動觸發 Lucide 圖標圖層刷新
+            useEffect(() => {
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
+            });
+
+            const topics = useMemo(() => {
+                return ['全部', ...new Set(cards.map(c => c.topic))];
+            }, [cards]);
+
+            // ================= 經典卡片區 =================
+            const [selectedTopic, setSelectedTopic] = useState('全部');
+            const [currentCardIndex, setCurrentCardIndex] = useState(0);
+            const [isFlipped, setIsFlipped] = useState(false);
+
+            const filteredCards = useMemo(() => {
+                if (selectedTopic === '全部') return cards;
+                return cards.filter(c => c.topic === selectedTopic);
+            }, [cards, selectedTopic]);
+
+            useEffect(() => {
+                setCurrentCardIndex(0);
+                setIsFlipped(false);
+            }, [selectedTopic]);
+
+            const updateStatus = (id, newStatus) => {
+                setCards(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
+            };
+
+            // ================= 模擬模考區 =================
+            const [quizTopic, setQuizTopic] = useState('全部');
+            const [quizStarted, setQuizStarted] = useState(false);
+            const [quizQuestions, setQuizQuestions] = useState([]);
+            const [currentQuizIndex, setCurrentQuizIndex] = useState(0);
+            const [selectedAnswer, setSelectedAnswer] = useState(null);
+            const [isAnswerSubmitted, setIsAnswerSubmitted] = useState(false);
+            const [quizScore, setQuizScore] = useState(0);
+            const [quizSummary, setQuizSummary] = useState(null);
+
+            const startQuiz = () => {
+                const pool = quizTopic === '全部' ? cards : cards.filter(c => c.topic === quizTopic);
+                if (pool.length < 3) {
+                    alert('該選定章節題目少於 3 題，無法生成干擾選項。');
+                    return;
+                }
+
+                const shuffled = [...pool].sort(() => 0.5 - Math.random());
+                const selected = shuffled.slice(0, Math.min(5, shuffled.length));
+
+                const generated = selected.map(q => {
+                    const distractorsPool = cards.filter(c => c.id !== q.id).map(c => c.answer);
+                    const randomDistractors = distractorsPool.sort(() => 0.5 - Math.random()).slice(0, 2);
+                    const options = [...randomDistractors, q.answer].sort(() => 0.5 - Math.random());
+                    return { ...q, options, correctAnswer: q.answer };
+                });
+
+                setQuizQuestions(generated);
+                setCurrentQuizIndex(0);
+                setSelectedAnswer(null);
+                setIsAnswerSubmitted(false);
+                setQuizScore(0);
+                setQuizSummary(null);
+                setQuizStarted(true);
+            };
+
+            const submitQuizAnswer = () => {
+                if (!selectedAnswer) return;
+                const isCorrect = selectedAnswer === quizQuestions[currentQuizIndex].correctAnswer;
+                if (isCorrect) setQuizScore(p => p + 1);
+                setIsAnswerSubmitted(true);
+            };
+
+            const advanceQuiz = () => {
+                if (currentQuizIndex + 1 < quizQuestions.length) {
+                    setCurrentQuizIndex(p => p + 1);
+                    setSelectedAnswer(null);
+                    setIsAnswerSubmitted(false);
+                } else {
+                    const finalScore = selectedAnswer === quizQuestions[currentQuizIndex].correctAnswer ? quizScore + 1 : quizScore;
+                    const summary = {
+                        date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                        topic: quizTopic,
+                        total: quizQuestions.length,
+                        score: finalScore
+                    };
+                    setQuizSummary(summary);
+                    setQuizHistory(prev => [summary, ...prev].slice(0, 10));
+                    setQuizStarted(false);
+                }
+            };
+
+            // ================= 看板核心計算 =================
+            const dashboardStats = useMemo(() => {
+                const total = cards.length;
+                const master = cards.filter(c => c.status === 'master').length;
+                const review = cards.filter(c => c.status === 'review').length;
+                const unlearned = cards.filter(c => c.status === 'unlearned').length;
+
+                const topicStats = topics.filter(t => t !== '全部').map(t => {
+                    const match = cards.filter(c => c.topic === t);
+                    return {
+                        name: t,
+                        total: match.length,
+                        master: match.filter(c => c.status === 'master').length,
+                        review: match.filter(c => c.status === 'review').length
+                    };
+                });
+
+                return { total, master, review, unlearned, topicStats };
+            }, [cards, topics]);
+
+            return (
+                <div className="app-container max-w-md mx-auto bg-white border-x border-slate-200 shadow-2xl relative">
+                    
+                    {/* 頂部標題 */}
+                    <header className="bg-slate-900 text-white px-4 py-3.5 flex justify-between items-center shrink-0 shadow-md">
+                        <div className="flex items-center space-x-2">
+                            <i data-lucide="shield-check" className="w-5 h-5 text-indigo-400"></i>
+                            <h1 className="text-base font-extrabold tracking-wider">CT 放射師國考轉換王 Pro</h1>
+                        </div>
+                        <span className="text-[10px] bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 px-2.5 py-0.5 rounded-full font-mono font-bold">
+                            32 題精華版
+                        </span>
+                    </header>
+
+                    {/* 中央主內容 */}
+                    <main className="flex-1 overflow-y-auto custom-scrollbar p-4 bg-slate-50">
+                        
+                        {/* 頁籤 1: 經典記憶卡 */}
+                        {activeTab === 'cards' && (
+                            <div className="flex flex-col h-full space-y-4">
+                                <div className="flex space-x-2 overflow-x-auto pb-1.5 custom-scrollbar shrink-0">
+                                    {topics.map(t => (
+                                        <button
+                                            key={t}
+                                            onClick={() => setSelectedTopic(t)}
+                                            className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+                                                selectedTopic === t 
+                                                ? 'bg-indigo-600 text-white shadow-md' 
+                                                : 'bg-white text-slate-600 border border-slate-200'
+                                            }`}
+                                        >
+                                            {t}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {filteredCards.length > 0 ? (
+                                    <div className="flex-1 flex flex-col justify-between py-1">
+                                        
+                                        {/* 翻轉卡片主體 */}
+                                        <div 
+                                            onClick={() => setIsFlipped(!isFlipped)} 
+                                            className="w-full h-72 perspective-1000 cursor-pointer touch-manipulation"
+                                        >
+                                            <div className={`w-full h-full duration-500 transform-style-3d relative ${isFlipped ? 'rotate-y-180' : ''}`}>
+                                                
+                                                {/* 正面 */}
+                                                <div className="absolute inset-0 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between backface-hidden">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="bg-slate-100 text-slate-700 text-[10px] font-bold px-2.5 py-0.5 rounded">
+                                                            {filteredCards[currentCardIndex].topic}
+                                                        </span>
+                                                        <span className="text-xs font-mono font-bold text-slate-400">
+                                                            {currentCardIndex + 1} / {filteredCards.length}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-center text-slate-800 text-base sm:text-lg font-bold px-1 py-4 leading-relaxed">
+                                                        {filteredCards[currentCardIndex].question}
+                                                    </div>
+                                                    <div className="text-center text-[10px] text-slate-400 flex items-center justify-center space-x-1">
+                                                        <i data-lucide="help-circle" className="w-3.5 h-3.5 text-slate-400"></i>
+                                                        <span>點擊翻看官方解析</span>
+                                                    </div>
+                                                </div>
+
+                                                {/* 反面 */}
+                                                <div className="absolute inset-0 bg-slate-900 text-slate-50 rounded-2xl p-6 flex flex-col justify-between backface-hidden rotate-y-180">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="bg-indigo-600 text-indigo-100 text-[10px] font-bold px-2.5 py-0.5 rounded">
+                                                            核心解說
+                                                        </span>
+                                                        <span className="text-xs font-mono font-bold text-slate-500">
+                                                            {currentCardIndex + 1} / {filteredCards.length}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-left text-slate-100 text-sm sm:text-base font-medium overflow-y-auto max-h-40 custom-scrollbar pr-1 leading-relaxed">
+                                                        {filteredCards[currentCardIndex].answer}
+                                                    </div>
+                                                    <div className="text-center text-[10px] text-slate-500 flex items-center justify-center space-x-1">
+                                                        <i data-lucide="refresh-cw" className="w-3.5 h-3.5 text-slate-500"></i>
+                                                        <span>點擊切換回題目</span>
+                                                    </div>
+                                                </div>
+
+                                            </div>
+                                        </div>
+
+                                        {/* 熟練度狀態控制 */}
+                                        <div className="grid grid-cols-2 gap-3 my-2.5">
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); updateStatus(filteredCards[currentCardIndex].id, 'review'); }}
+                                                className={`py-3 rounded-xl border text-xs font-bold flex items-center justify-center space-x-1.5 transition-all ${
+                                                    filteredCards[currentCardIndex].status === 'review'
+                                                    ? 'bg-amber-50 border-amber-400 text-amber-700 font-black'
+                                                    : 'bg-white border-slate-200 text-slate-600'
+                                                }`}
+                                            >
+                                                <i data-lucide="alert-circle" className="w-4 h-4 text-amber-500"></i>
+                                                <span>標記再複習</span>
+                                            </button>
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); updateStatus(filteredCards[currentCardIndex].id, 'master'); }}
+                                                className={`py-3 rounded-xl border text-xs font-bold flex items-center justify-center space-x-1.5 transition-all ${
+                                                    filteredCards[currentCardIndex].status === 'master'
+                                                    ? 'bg-emerald-50 border-emerald-400 text-emerald-700 font-black'
+                                                    : 'bg-white border-slate-200 text-slate-600'
+                                                }`}
+                                            >
+                                                <i data-lucide="check-circle" className="w-4 h-4 text-emerald-500"></i>
+                                                <span>這題我會了</span>
+                                            </button>
+                                        </div>
+
+                                        {/* 下方控制按鈕列 */}
+                                        <div className="flex items-center justify-between px-1">
+                                            <button
+                                                disabled={currentCardIndex === 0}
+                                                onClick={() => { setCurrentCardIndex(p => p - 1); setIsFlipped(false); }}
+                                                className="p-3.5 bg-white border border-slate-200 rounded-full text-slate-600 disabled:opacity-40 disabled:pointer-events-none active:bg-slate-100 shadow-sm"
+                                            >
+                                                <i data-lucide="chevron-left" className="w-4 h-4"></i>
+                                            </button>
+                                            <div className="text-xs font-bold text-slate-400 font-mono tracking-wide">
+                                                進度 {currentCardIndex + 1} / {filteredCards.length}
+                                            </div>
+                                            <button
+                                                disabled={currentCardIndex === filteredCards.length - 1}
+                                                onClick={() => { setCurrentCardIndex(p => p + 1); setIsFlipped(false); }}
+                                                className="p-3.5 bg-white border border-slate-200 rounded-full text-slate-600 disabled:opacity-40 disabled:pointer-events-none active:bg-slate-100 shadow-sm"
+                                            >
+                                                <i data-lucide="chevron-right" className="w-4 h-4"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex-1 flex flex-col items-center justify-center text-slate-400 py-12">
+                                        <i data-lucide="inbox" className="w-10 h-10 mb-2"></i>
+                                        <p className="text-xs">目前無題目資料</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* 頁籤 2: 隨機模擬考 */}
+                        {activeTab === 'quiz' && (
+                            <div className="flex flex-col h-full justify-between">
+                                {!quizStarted ? (
+                                    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm my-auto space-y-5">
+                                        <div className="text-center space-y-2">
+                                            <div className="inline-flex p-3.5 bg-indigo-50 text-indigo-600 rounded-2xl shadow-inner">
+                                                <i data-lucide="pencil-line" className="w-7 h-7"></i>
+                                            </div>
+                                            <h3 className="text-base font-extrabold text-slate-800">隨機實戰強效模考</h3>
+                                            <p className="text-xs text-slate-500 px-1 leading-relaxed">隨機抽選 5 題，並將其餘考題答案混淆為干擾選項，幫助您進行無提示盲測訓練！</p>
+                                        </div>
+
+                                        {quizSummary && (
+                                            <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3.5 text-center">
+                                                <span className="text-[10px] text-emerald-700 font-bold uppercase tracking-wider block mb-0.5">最新完成戰績</span>
+                                                <div className="text-xl font-black text-emerald-800 font-mono">{quizSummary.score} / {quizSummary.total} 題</div>
+                                                <span className="text-[9px] text-slate-400 block">{quizSummary.date} | {quizSummary.topic}</span>
+                                            </div>
+                                        )}
+
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-bold text-slate-600 pl-0.5 block">篩選測驗範圍</label>
+                                            <select 
+                                                value={quizTopic} 
+                                                onChange={(e) => setQuizTopic(e.target.value)}
+                                                className="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-xl px-3 py-3 text-xs font-bold outline-none focus:border-indigo-500"
+                                            >
+                                                {topics.map(t => <option key={t} value={t}>{t}</option>)}
+                                            </select>
+                                        </div>
+
+                                        <button
+                                            onClick={startQuiz}
+                                            className="w-full bg-slate-900 text-white font-bold text-xs py-3.5 rounded-xl shadow-md tracking-wider flex items-center justify-center space-x-1.5 active:scale-[0.99]"
+                                        >
+                                            <i data-lucide="zap" className="w-4 h-4 text-amber-400 fill-amber-400"></i>
+                                            <span>開始進行盲測考</span>
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col h-full justify-between py-1">
+                                        <div className="w-full shrink-0">
+                                            <div className="flex justify-between items-center text-xs text-slate-500 font-bold mb-1.5 px-0.5">
+                                                <span className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded text-[10px]">{quizQuestions[currentQuizIndex].topic}</span>
+                                                <span className="font-mono">{currentQuizIndex + 1} / {quizQuestions.length} 題</span>
+                                            </div>
+                                            <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                                <div 
+                                                    className="h-full bg-indigo-600 transition-all duration-300"
+                                                    style={{ width: `${((currentQuizIndex + 1) / quizQuestions.length) * 100}%` }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm my-4 flex-1 flex flex-col justify-center">
+                                            <p className="text-slate-800 text-sm sm:text-base font-bold text-center leading-relaxed">
+                                                {quizQuestions[currentQuizIndex].question}
+                                            </p>
+                                        </div>
+
+                                        <div className="space-y-2 shrink-0 mb-4">
+                                            {quizQuestions[currentQuizIndex].options.map((option, idx) => {
+                                                const isCorrect = option === quizQuestions[currentQuizIndex].correctAnswer;
+                                                const isSelected = option === selectedAnswer;
+                                                
+                                                let optStyle = "bg-white border-slate-200 text-slate-700";
+                                                if (isAnswerSubmitted) {
+                                                    if (isCorrect) optStyle = "bg-emerald-50 border-emerald-500 text-emerald-800 font-bold shadow-sm";
+                                                    else if (isSelected) optStyle = "bg-rose-50 border-rose-400 text-rose-800";
+                                                    else optStyle = "bg-white border-slate-100 opacity-40";
+                                                } else if (isSelected) {
+                                                    optStyle = "bg-indigo-50 border-indigo-500 text-indigo-700 font-bold";
+                                                }
+
+                                                return (
+                                                    <button
+                                                        key={idx}
+                                                        disabled={isAnswerSubmitted}
+                                                        onClick={() => setSelectedAnswer(option)}
+                                                        className={`w-full text-left p-3 rounded-xl border text-xs sm:text-sm transition-all flex items-start space-x-2 ${optStyle}`}
+                                                    >
+                                                        <span className="font-mono bg-slate-100 text-slate-500 rounded-md w-4 h-4 flex items-center justify-center shrink-0 mt-0.5 text-[10px]">
+                                                            {String.fromCharCode(65 + idx)}
+                                                        </span>
+                                                        <span className="leading-normal flex-1">{option}</span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+
+                                        <div className="shrink-0">
+                                            {!isAnswerSubmitted ? (
+                                                <button
+                                                    disabled={!selectedAnswer}
+                                                    onClick={submitQuizAnswer}
+                                                    className="w-full bg-indigo-600 disabled:opacity-40 text-white font-bold text-xs py-3.5 rounded-xl shadow-md"
+                                                >
+                                                    確認送出答案
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={advanceQuiz}
+                                                    className="w-full bg-slate-800 text-white font-bold text-xs py-3.5 rounded-xl shadow-md flex items-center justify-center space-x-1"
+                                                >
+                                                    <span>{currentQuizIndex + 1 === quizQuestions.length ? '查看總分結算' : '下一題'}</span>
+                                                    <i data-lucide="arrow-right" className="w-3.5 h-3.5"></i>
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* 頁籤 3: 數據看盤 */}
+                        {activeTab === 'dashboard' && (
+                            <div className="space-y-4">
+                                <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm grid grid-cols-3 gap-2 text-center">
+                                    <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-2.5">
+                                        <span className="text-[10px] text-emerald-600 font-bold block mb-0.5">精通掌握</span>
+                                        <span className="text-xl font-black text-emerald-600 font-mono">{dashboardStats.master}</span>
+                                        <span className="text-[9px] text-slate-400 block">/ {dashboardStats.total} 題</span>
+                                    </div>
+                                    <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-2.5">
+                                        <span className="text-[10px] text-amber-600 font-bold block mb-0.5">再複習區</span>
+                                        <span className="text-xl font-black text-amber-500 font-mono">{dashboardStats.review}</span>
+                                        <span className="text-[9px] text-slate-400 block">/ {dashboardStats.total} 題</span>
+                                    </div>
+                                    <div className="bg-slate-100/70 border border-slate-200 rounded-xl p-2.5">
+                                        <span className="text-[10px] text-slate-500 font-bold block mb-0.5">未讀新題</span>
+                                        <span className="text-xl font-black text-slate-400 font-mono">{dashboardStats.unlearned}</span>
+                                        <span className="text-[9px] text-slate-400 block">/ {dashboardStats.total} 題</span>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
+                                    <h4 className="text-xs font-bold text-slate-700 border-b pb-2 flex items-center space-x-1">
+                                        <i data-lucide="bar-chart-3" className="w-4 h-4 text-indigo-500"></i>
+                                        <span>精細章節熟悉度佔比</span>
+                                    </h4>
+                                    <div className="space-y-3">
+                                        {dashboardStats.topicStats.map(topic => {
+                                            const masterPct = topic.total > 0 ? (topic.master / topic.total) * 100 : 0;
+                                            const reviewPct = topic.total > 0 ? (topic.review / topic.total) * 100 : 0;
+                                            return (
+                                                <div key={topic.name} className="space-y-1">
+                                                    <div className="flex justify-between text-xs font-bold text-slate-600">
+                                                        <span className="truncate max-w-[200px]">{topic.name}</span>
+                                                        <span className="font-mono text-[10px] text-slate-400 shrink-0">掌握率 {topic.master}/{topic.total}</span>
+                                                    </div>
+                                                    <div className="w-full h-2 bg-slate-100 rounded-full flex overflow-hidden">
+                                                        <div className="bg-emerald-500 h-full transition-all" style={{ width: `${masterPct}%` }} />
+                                                        <div className="bg-amber-400 h-full transition-all" style={{ width: `${reviewPct}%` }} />
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-2">
+                                    <h4 className="text-xs font-bold text-slate-700 flex items-center space-x-1 mb-1.5">
+                                        <i data-lucide="history" className="w-4 h-4 text-slate-500"></i>
+                                        <span>近期摸底測驗歷史</span>
+                                    </h4>
+                                    {quizHistory.length > 0 ? (
+                                        <div className="space-y-2 max-h-36 overflow-y-auto custom-scrollbar pr-0.5">
+                                            {quizHistory.map((hist, i) => (
+                                                <div key={i} className="flex justify-between items-center bg-slate-50 border border-slate-100 p-2 rounded-xl">
+                                                    <div className="truncate pr-2">
+                                                        <span className="text-xs font-bold text-slate-700 block truncate">{hist.topic} 模考</span>
+                                                        <span className="text-[9px] text-slate-400">{hist.date}</span>
+                                                    </div>
+                                                    <span className={`text-xs font-mono font-black px-2.5 py-1 rounded-md shrink-0 ${
+                                                        hist.score === hist.total ? 'bg-emerald-100 text-emerald-800' : 'bg-indigo-50 text-indigo-700'
+                                                    }`}>
+                                                        {hist.score} / {hist.total} 題
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-center text-xs text-slate-400 py-4">目前尚無歷史測驗紀錄</p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                    </main>
+
+                    {/* 底部導覽標籤 */}
+                    <nav className="bg-white border-t border-slate-200 px-2 py-2 flex justify-around shrink-0 shadow-lg">
+                        <button 
+                            onClick={() => setActiveTab('cards')}
+                            className={`flex flex-col items-center space-y-0.5 py-1 px-4 rounded-xl transition-all ${
+                                activeTab === 'cards' ? 'text-indigo-600 font-bold' : 'text-slate-400'
+                            }`}
+                        >
+                            <i data-lucide="book-open" className="w-5 h-5"></i>
+                            <span className="text-[10px]">記憶卡片</span>
+                        </button>
+                        
+                        <button 
+                            onClick={() => { setActiveTab('quiz'); setQuizStarted(false); }}
+                            className={`flex flex-col items-center space-y-0.5 py-1 px-4 rounded-xl transition-all ${
+                                activeTab === 'quiz' ? 'text-indigo-600 font-bold' : 'text-slate-400'
+                            }`}
+                        >
+                            <i data-lucide="check-square" className="w-5 h-5"></i>
+                            <span className="text-[10px]">隨機模考</span>
+                        </button>
+                        
+                        <button 
+                            onClick={() => setActiveTab('dashboard')}
+                            className={`flex flex-col items-center space-y-0.5 py-1 px-4 rounded-xl transition-all ${
+                                activeTab === 'dashboard' ? 'text-indigo-600 font-bold' : 'text-slate-400'
+                            }`}
+                        >
+                            <i data-lucide="trending-up" className="w-5 h-5"></i>
+                            <span className="text-[10px]">統計看板</span>
+                        </button>
+                    </nav>
+
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
