@@ -33,7 +33,7 @@
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 30px;
-            table-layout: fixed; /* 讓欄寬分配更平均整齊 */
+            table-layout: fixed;
         }
         th, td {
             border: 2px solid #cbd5e0;
@@ -43,7 +43,7 @@
             word-wrap: break-word;
         }
         
-        /* 依圖片與需求設定各欄寬比例 */
+        /* 欄寬比例分配 */
         th:nth-child(1), td:nth-child(1) { width: 14%; }
         th:nth-child(2), td:nth-child(2) { width: 16%; }
         th:nth-child(3), td:nth-child(3) { width: 14%; }
@@ -52,18 +52,22 @@
         th:nth-child(6), td:nth-child(6) { width: 13%; }
         th:nth-child(7), td:nth-child(7) { width: 13%; }
 
-        /* 上層格子（標題欄位）的指定顏色 */
+        /* 上層標題格子顏色設定 */
         th.th-blue {
             background-color: #bee3f8 !important; /* 體重欄：藍色 */
             color: #1a365d;
         }
+        th.th-orange {
+            background-color: #feebc8 !important; /* 預打藥量：橘色 */
+            color: #7b341e;
+        }
         th.th-yellow {
-            background-color: #fefcbf !important; /* 預打藥、打藥前、打藥後：黃色 */
+            background-color: #fefcbf !important; /* 打藥前、打藥後：黃色 */
             color: #744210;
         }
-        th.th-orange {
-            background-color: #feebc8 !important; /* 實打藥量：橘色 */
-            color: #7b341e;
+        th.th-green {
+            background-color: #c6f6d5 !important; /* 實打藥量：綠色 */
+            color: #22543d;
         }
         th.th-range {
             background-color: #fed7d7 !important; /* 範圍欄：柔和紅 */
@@ -147,10 +151,10 @@
         <thead>
             <tr>
                 <th class="th-blue">體重 (kg)</th>
-                <th class="th-yellow">預打藥量 <br><small style="font-size:15px; font-weight:normal;">(體重 × 0.14)</small></th>
+                <th class="th-orange">預打藥量 <br><small style="font-size:15px; font-weight:normal;">(體重 × 0.14)</small></th>
                 <th class="th-yellow">打藥前</th>
                 <th class="th-yellow">打藥後</th>
-                <th class="th-orange">實打藥量 <br><small style="font-size:15px; font-weight:normal;">(打藥前 − 打藥後)</small></th>
+                <th class="th-green">實打藥量 <br><small style="font-size:15px; font-weight:normal;">(打藥前 − 打藥後)</small></th>
                 <th class="th-range">-10% 範圍</th>
                 <th class="th-range">+20% 範圍</th>
             </tr>
