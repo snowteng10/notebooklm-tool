@@ -56,7 +56,10 @@
             background-color: #ebf8ff !important; /* 體重欄：藍色 */
         }
         .bg-yellow {
-            background-color: #fefcbf !important; /* 預打藥、打藥前、打藥後、實打藥量：黃色 */
+            background-color: #fefcbf !important; /* 預打藥、打藥前、打藥後：黃色 */
+        }
+        .bg-orange {
+            background-color: #feebc8 !important; /* 實打藥量：醒目橘色 */
         }
 
         td input {
@@ -87,9 +90,6 @@
             color: #2b6cb0;
         }
         .alert-box {
-            background-color: #fff5f5;
-            border: 3px solid #fc8181;
-            color: #c53030;
             padding: 18px;
             border-radius: 10px;
             text-align: center;
@@ -97,6 +97,16 @@
             font-weight: bold;
             margin-bottom: 25px;
             display: none;
+        }
+        .alert-too-much {
+            background-color: #fff5f5;
+            border: 3px solid #fc8181;
+            color: #c53030;
+        }
+        .alert-too-less {
+            background-color: #fffaf0;
+            border: 3px solid #f6ad55;
+            color: #dd6b20;
         }
         .btn-container {
             text-align: center;
@@ -122,7 +132,7 @@
 <div class="calculator-container">
     <h2>PET 打藥劑量計算器</h2>
     
-    <div id="alertBox" class="alert-box">⚠️ 警告：實打藥量超出安全範圍（高於 +20% 或低於 -10%）！</div>
+    <div id="alertBox" class="alert-box"></div>
 
     <table>
         <thead>
@@ -150,7 +160,7 @@
                 <td class="bg-yellow">
                     <input type="number" id="afterDose" placeholder="打藥後" oninput="calculate()">
                 </td>
-                <td class="bg-yellow">
+                <td class="bg-orange">
                     <span id="actualDose">-</span>
                 </td>
                 <td class="range-val" id="minus10">-</td>
@@ -166,15 +176,20 @@
 
 <script>
     // 警報聲音提示 (Web Audio API)
-    function playBeep() {
+    function playBeep(isTooMuch) {
         try {
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const oscillator = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
             
-            oscillator.type = 'sawtooth';
-            oscillator.frequency.setValueAtTime(600, audioCtx.currentTime);
-            oscillator.frequency.setValueAtTime(900, audioCtx.currentTime + 0.15); // 雙音頻警示
+            oscillator.type = 'sine';
+            if (isTooMuch) {
+                oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+                oscillator.frequency.setValueAtTime(1000, audioCtx.currentTime + 0.15); // 太多的高音警示
+            } else {
+                oscillator.frequency.setValueAtTime(500, audioCtx.currentTime);
+                oscillator.frequency.setValueAtTime(400, audioCtx.currentTime + 0.15); // 太少低音警示
+            }
             
             gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
             
@@ -226,11 +241,18 @@
             minus10Elem.innerText = m10.toFixed(2);
             plus20Elem.innerText = p20.toFixed(2);
 
-            // 4. 檢查是否超出範圍 (大於 +20% 或小於 -10%)
+            // 4. 個別判斷：太多或太少
             if (!isNaN(actualDose)) {
-                if (actualDose > p20 || actualDose < m10) {
+                if (actualDose > p20) {
+                    alertBox.className = 'alert-box alert-too-much';
+                    alertBox.innerText = '⚠️ 警告：實打藥量【太多】，已超出 +20% 上限範圍！';
                     alertBox.style.display = 'block';
-                    playBeep(); // 觸發聲音提示
+                    playBeep(true);
+                } else if (actualDose < m10) {
+                    alertBox.className = 'alert-box alert-too-less';
+                    alertBox.innerText = '⚠️ 注意：實打藥量【太少】，低於 -10% 下限範圍！';
+                    alertBox.style.display = 'block';
+                    playBeep(false);
                 } else {
                     alertBox.style.display = 'none';
                 }
