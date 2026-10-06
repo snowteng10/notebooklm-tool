@@ -7,9 +7,9 @@
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: #eef2f5;
+            background-color: #f0f4f8;
             margin: 0;
-            padding: 20px;
+            padding: 30px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -19,71 +19,83 @@
             background: #ffffff;
             padding: 40px;
             border-radius: 16px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
             width: 100%;
-            max-width: 900px;
+            max-width: 1000px;
         }
         h2 {
             text-align: center;
             color: #1a365d;
             margin-bottom: 30px;
-            font-size: 28px;
+            font-size: 32px;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 25px;
+            margin-bottom: 30px;
         }
         th, td {
-            border: 2px solid #e2e8f0;
-            padding: 16px 12px;
-            text-align: center;
-            font-size: 18px;
-        }
-        th {
-            background-color: #f7fafc;
-            color: #2d3748;
-            font-weight: 600;
-        }
-        th.red-text {
-            color: #e53e3e;
-        }
-        td input {
-            width: 90%;
-            padding: 12px;
-            box-sizing: border-box;
             border: 2px solid #cbd5e0;
-            border-radius: 8px;
+            padding: 20px 15px;
             text-align: center;
             font-size: 20px;
+        }
+        th {
+            background-color: #2d3748;
+            color: #ffffff;
             font-weight: bold;
-            color: #2b6cb0;
+            font-size: 22px;
+        }
+        th.red-header {
+            background-color: #9b2c2c;
+            color: #ffffff;
+        }
+        
+        /* 依需求指定的底色 */
+        .bg-blue {
+            background-color: #ebf8ff !important; /* 體重欄：藍色 */
+        }
+        .bg-yellow {
+            background-color: #fefcbf !important; /* 預打藥、打藥前、打藥後、實打藥量：黃色 */
+        }
+
+        td input {
+            width: 95%;
+            padding: 14px;
+            box-sizing: border-box;
+            border: 2px solid #a0aec0;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #2d3748;
+            background-color: inherit;
         }
         td input:focus {
             border-color: #3182ce;
             outline: none;
-            box-shadow: 0 0 5px rgba(49, 130, 206, 0.3);
+            box-shadow: 0 0 8px rgba(49, 130, 206, 0.4);
         }
         td span {
             font-weight: bold;
-            font-size: 20px;
-            color: #2b6cb0;
+            font-size: 26px;
+            color: #1a202c;
         }
-        td.red-val {
-            color: #e53e3e;
+        td.range-val {
             font-weight: bold;
-            font-size: 20px;
+            font-size: 24px;
+            color: #2b6cb0;
         }
         .alert-box {
             background-color: #fff5f5;
-            border: 2px solid #feb2b2;
+            border: 3px solid #fc8181;
             color: #c53030;
-            padding: 15px;
-            border-radius: 8px;
+            padding: 18px;
+            border-radius: 10px;
             text-align: center;
-            font-size: 18px;
+            font-size: 22px;
             font-weight: bold;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             display: none;
         }
         .btn-container {
@@ -93,9 +105,9 @@
             background-color: #3182ce;
             color: white;
             border: none;
-            padding: 12px 30px;
-            font-size: 18px;
-            border-radius: 8px;
+            padding: 14px 40px;
+            font-size: 22px;
+            border-radius: 10px;
             cursor: pointer;
             transition: background 0.2s;
             font-weight: bold;
@@ -110,29 +122,39 @@
 <div class="calculator-container">
     <h2>PET 打藥劑量計算器</h2>
     
-    <div id="alertBox" class="alert-box">⚠️ 注意：實打藥量已超出上限範圍 (+20%)！</div>
+    <div id="alertBox" class="alert-box">⚠️ 警告：實打藥量超出安全範圍（高於 +20% 或低於 -10%）！</div>
 
     <table>
         <thead>
             <tr>
                 <th>體重 (kg)</th>
-                <th>預打藥量 <br><small style="font-weight:normal; font-size:14px; color:#4a5568;">(體重 × 0.14)</small>[cite: 1]</th>
+                <th>預打藥量 <br><small style="font-size:15px; color:#edf2f7;">(體重 × 0.14)</small>[cite: 1]</th>
                 <th>打藥前</th>
                 <th>打藥後</th>
-                <th>實打藥量 <br><small style="font-weight:normal; font-size:14px; color:#4a5568;">(打藥前 − 打藥後)</small></th>
-                <th class="red-text">-10% 範圍</th>
-                <th class="red-text">+20% 範圍</th>
+                <th>實打藥量 <br><small style="font-size:15px; color:#edf2f7;">(打藥前 − 打藥後)</small></th>
+                <th class="red-header">-10% 範圍</th>
+                <th class="red-header">+20% 範圍</th>
             </tr>
         </thead>
         <tbody>
             <tr>
-                <td><input type="number" id="weight" placeholder="輸入體重" oninput="calculate()"></td>
-                <td><span id="predose">-</span></td>
-                <td><input type="number" id="beforeDose" placeholder="打藥前" oninput="calculate()"></td>
-                <td><input type="number" id="afterDose" placeholder="打藥後" oninput="calculate()"></td>
-                <td><span id="actualDose">-</span></td>
-                <td class="red-val" id="minus10">-</td>
-                <td class="red-val" id="plus20">-</td>
+                <td class="bg-blue">
+                    <input type="number" id="weight" placeholder="輸入體重" oninput="calculate()">
+                </td>
+                <td class="bg-yellow">
+                    <span id="predose">-</span>
+                </td>
+                <td class="bg-yellow">
+                    <input type="number" id="beforeDose" placeholder="打藥前" oninput="calculate()">
+                </td>
+                <td class="bg-yellow">
+                    <input type="number" id="afterDose" placeholder="打藥後" oninput="calculate()">
+                </td>
+                <td class="bg-yellow">
+                    <span id="actualDose">-</span>
+                </td>
+                <td class="range-val" id="minus10">-</td>
+                <td class="range-val" id="plus20">-</td>
             </tr>
         </tbody>
     </table>
@@ -143,28 +165,28 @@
 </div>
 
 <script>
-    // 播放提示音效功能 (Web Audio API)
+    // 警報聲音提示 (Web Audio API)
     function playBeep() {
         try {
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const oscillator = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
             
-            oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(800, audioCtx.currentTime); // 頻率
-            gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.setValueAtTime(600, audioCtx.currentTime);
+            oscillator.frequency.setValueAtTime(900, audioCtx.currentTime + 0.15); // 雙音頻警示
+            
+            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
             
             oscillator.connect(gainNode);
             gainNode.connect(audioCtx.destination);
             
             oscillator.start();
-            oscillator.stop(audioCtx.currentTime + 0.4); // 嗶 0.4 秒
+            oscillator.stop(audioCtx.currentTime + 0.4);
         } catch (e) {
             console.log("音效播放失敗", e);
         }
     }
-
-    let hasAlerted = function() {}; // 防止過度重複播放警報
 
     function calculate() {
         const weight = parseFloat(document.getElementById('weight').value);
@@ -188,7 +210,7 @@
             predoseElem.innerText = '-';
         }
 
-        // 2. 計算實打藥量與比例範圍
+        // 2. 計算實打藥量 (打藥前 - 打藥後)
         if (!isNaN(beforeDose) && !isNaN(afterDose)) {
             actualDose = beforeDose - afterDose;
             actualDoseElem.innerText = actualDose.toFixed(2);
@@ -196,7 +218,7 @@
             actualDoseElem.innerText = '-';
         }
 
-        // 如果有預打藥量，計算基於預打藥量的 -10% 與 +20%
+        // 3. 計算基準比例範圍 (-10% 與 +20%)
         if (!isNaN(predose)) {
             const m10 = predose * 0.9;
             const p20 = predose * 1.2;
@@ -204,10 +226,14 @@
             minus10Elem.innerText = m10.toFixed(2);
             plus20Elem.innerText = p20.toFixed(2);
 
-            // 檢查實打藥量是否超過 +20% 範圍
-            if (!isNaN(actualDose) && actualDose > p20) {
-                alertBox.style.display = 'block';
-                playBeep(); // 觸發聲音提示
+            // 4. 檢查是否超出範圍 (大於 +20% 或小於 -10%)
+            if (!isNaN(actualDose)) {
+                if (actualDose > p20 || actualDose < m10) {
+                    alertBox.style.display = 'block';
+                    playBeep(); // 觸發聲音提示
+                } else {
+                    alertBox.style.display = 'none';
+                }
             } else {
                 alertBox.style.display = 'none';
             }
