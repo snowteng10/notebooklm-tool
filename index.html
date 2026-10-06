@@ -3,200 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CT學習卡</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+    <title>PET 打藥劑量計算器</title>
     <style>
-        html, body, #root {
-            height: 100%;
-            width: 100%;
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f7f6;
             margin: 0;
-            padding: 0;
-            overflow: hidden;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background-color: #f8fafc;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
         }
-        /* 隱藏捲軸但保持可滾動 */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
+        .calculator-container {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 800px;
         }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 25px;
         }
-        /* 字卡翻轉動畫 */
-        .perspective-1000 {
-            perspective: 1000px;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
         }
-        .transform-style-3d {
-            transform-style: preserve-3d;
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px 8px;
+            text-align: center;
+            font-size: 15px;
         }
-        .backface-hidden {
-            backface-visibility: hidden;
+        th {
+            background-color: #f8f9fa;
+            color: #333;
         }
-        .rotate-y-180 {
-            transform: rotateY(180deg);
+        th.red-text {
+            color: #e74c3c;
+        }
+        td input {
+            width: 90%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 16px;
+        }
+        td span {
+            font-weight: bold;
+            color: #2980b9;
+        }
+        td.red-val {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .btn-container {
+            text-align: center;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #2980b9;
         }
     </style>
 </head>
 <body>
-    <div id="root"></div>
 
-    <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
+<div class="calculator-container">
+    <h2>PET 打藥劑量計算器</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>體重 (kg)</th>
+                <th>預打藥量 <br><small style="font-weight:normal; font-size:12px;">(體重 * 0.14)</small></th>
+                <th>打藥前</th>
+                <th>打藥後</th>
+                <th>實打藥量 <br><small style="font-weight:normal; font-size:12px;">(打藥前 - 打藥後)</small></th>
+                <th class="red-text">-10%</th>
+                <th class="red-text">20%</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><input type="number" id="weight" placeholder="輸入體重" oninput="calculate()"></td>
+                <td><span id="predose">-</span></td>
+                <td><input type="number" id="beforeDose" placeholder="打藥前" oninput="calculate()"></td>
+                <td><input type="number" id="afterDose" placeholder="打藥後" oninput="calculate()"></td>
+                <td><span id="actualDose">-</span></td>
+                <td class="red-val" id="minus10">-</td>
+                <td class="red-val" id="plus20">-</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <div class="btn-container">
+        <button onclick="clearAll()">清除重置</button>
+    </div>
+</div>
 
-        // 從圖片中精準提取的 34 筆結構化數據
-        const rawData = [
-            { id: 1, question: "CT 檢查的第一步是什麼？", answer: "1.確認醫囑、2.檢查目的、3.檢查部位是否與申請單相符。", category: "檢查流程" },
-            { id: 2, question: "在「確認醫囑」時，哪項不屬於必須核對的項目？", answer: "檢查部位（應為：確認醫囑、檢查目的、檢查部位皆須核對）。", category: "檢查流程" },
-            { id: 3, question: "「病人確認」時，應使用至少幾種辨識方法？", answer: "姓名、出生年月日、手圈（至少兩種以上）。", category: "檢查流程" },
-            { id: 4, question: "「病人確認」中，針對對比劑調配與過敏史，下列何者正確？", answer: "對比劑適應症、過敏史、簽署同意書確認。", category: "檢查流程" },
-            { id: 5, question: "「病人確認」之特殊管路（如 CVC, PICC）需注意什麼？", answer: "需確認病患身上特殊管路是否可耐受高壓注射。", category: "檢查流程" },
-            { id: 6, question: "「檢查前準備」中，關於更衣的敘述何者正確？", answer: "去除金屬物品、更換檢查衣（避免假影產生）。", category: "檢查流程" },
-            { id: 7, question: "檢查前告知中，有關顯影劑注射感受的說明，何者最適當？", answer: "確保檢查安全、說明注射時會有全身發熱感屬正常現象。", category: "檢查流程" },
-            { id: 8, question: "檢查前告知中，若病人無法配合吸氣閉氣，該如何處置？", answer: "協助區分吸氣與閉氣、多練習幾次，必要時聯繫開單醫師。", category: "檢查流程" },
-            { id: 9, question: "「掃描軌道與範圍設定」中，何者為優先考量？", answer: "需確認各項參數設定，範圍應涵蓋完整目標器官。", category: "檢查流程" },
-            { id: 10, question: "「掃描軌道與範圍設定」中，關於 Protocol 選擇何者正確？", answer: "選擇 Protocol 時需依據檢查部位與體型做適度調整。", category: "檢查流程" },
-            { id: 11, question: "掃描執行時，若病人突然咳嗽，放射師應如何應對？", answer: "解釋呼吸配合重要性、視情況暫停或重新掃描。", category: "檢查流程" },
-            { id: 12, question: "「檢查後處理」中，影像重組與傳送的要求為何？", answer: "MPR（多平面重組）處理、確認影像完整後傳送 PACS。", category: "檢查流程" },
-            { id: 13, question: "對比劑安全：外滲處理之急救流程第一步為何？", answer: "可能引起嚴重組織壞死、應立即停止注射並拔除針頭。", category: "對比劑安全" },
-            { id: 14, question: "對比劑安全：腎功能評估（eGFR）標準值為何？", answer: "查詢 eGFR 數值，若低於 30 ml/min/1.73m² 需極度謹慎或停用。", category: "對比劑安全" },
-            { id: 15, question: "對比劑安全：高風險病患（如氣喘、過敏史）如何預防？", answer: "注意滲漏風險、必要時於檢查前給予預防性抗組織胺或類固醇。", category: "對比劑安全" },
-            { id: 16, question: "緊急狀況沉著應變：發生輕度過敏反應（如蕁麻疹）如何處理？", answer: "蕁麻疹、皮膚發癢、密切觀察生命徵象，必要時給予抗組織胺。", category: "緊急狀況" },
-            { id: 17, question: "對比劑目的與原理：使用對比劑的主要目的是什麼？", answer: "提高血管與組織之間的對比度、增加病灶可見性。", category: "對比劑概念" },
-            { id: 18, question: "對比劑目的與原理：靜脈注射與動脈注射有何不同？", answer: "偵測腫瘤或血管病變、時間相（Phase）動態掃描順序不同。", category: "對比劑概念" },
-            { id: 19, question: "給藥方式：CT 常見的對比劑給藥途徑為何？", answer: "靜脈注射（IV Injection）、高壓注射器自動推注。", category: "對比劑概念" },
-            { id: 20, question: "技術細節：如何精準掌握動脈期（Arterial Phase）的掃描時間？", answer: "Bolus tracking（團注追蹤技術）或 Smart Prep 監測主動脈 CT 值。", category: "對比劑概念" },
-            { id: 21, question: "對比劑注射時，高壓注射器的壓力和流速監測有何重要性？", answer: "監控壓力極限、防範血管破裂與對比劑外滲。", category: "對比劑概念" },
-            { id: 22, question: "縮寫必背：MPR 代表什麼？", answer: "Multiplanar Reconstruction（多平面重組）。", category: "常用縮寫" },
-            { id: 23, question: "縮寫必背：COR 代表什麼？", answer: "COR（冠狀面 / Coronal view）。", category: "常用縮寫" },
-            { id: 24, question: "縮寫必背：MIP 代表什麼？", answer: "Maximum Intensity Projection（最大密度投影）。", category: "常用縮寫" },
-            { id: 25, question: "縮寫必背：ALARA 原則的核心意義是什麼？", answer: "與輻射劑量相關：As Low As Reasonably Achievable（在合理可行下盡可能低）。", category: "常用縮寫" },
-            { id: 26, question: "縮寫必背：eGFR 代表什麼？", answer: "腎絲球過濾率估計值（estimated Glomerular Filtration Rate）。", category: "常用縮寫" },
-            { id: 27, question: "檢查項目縮寫：NCCT 代表什麼？", answer: "Non-Contrast Computed Tomography（無對比劑電腦斷層掃描）。", category: "常用縮寫" },
-            { id: 28, question: "檢查項目縮寫：CECT 代表什麼？", answer: "Contrast-Enhanced Computed Tomography（對比劑增強電腦斷層掃描）。", category: "常用縮寫" },
-            { id: 29, question: "臨床項目縮寫：TCC 代表什麼？", answer: "移行上皮癌（Transient Cell Carcinoma / 尿路上皮癌）。", category: "常用縮寫" },
-            { id: 30, question: "臨床項目縮寫：HCC 代表什麼？", answer: "肝細胞癌（Hepatocellular Carcinoma）。", category: "常用縮寫" },
-            { id: 31, question: "臨床項目縮寫：RCC 代表什麼？", answer: "腎細胞癌（Renal Cell Carcinoma）。", category: "常用縮寫" },
-            { id: 32, question: "臨床項目縮寫：PAOD 代表什麼？", answer: "周邊動脈阻塞疾病（Peripheral Arterial Occlusive Disease）。", category: "常用縮寫" },
-            { id: 33, question: "臨床項目縮寫：PE 代表什麼？", answer: "肺栓塞（Pulmonary Embolism）。", category: "常用縮寫" },
-            { id: 34, question: "臨床項目縮寫：DVT 代表什麼？", answer: "深部靜脈血栓（Deep Vein Thrombosis）。", category: "常用縮寫" }
-        ];
+<script>
+    function calculate() {
+        // 取得輸入值
+        const weight = parseFloat(document.getElementById('weight').value);
+        const beforeDose = parseFloat(document.getElementById('beforeDose').value);
+        const afterDose = parseFloat(document.getElementById('afterDose').value);
 
-        function App() {
-            const [activeTab, setActiveTab] = useState('flashcard'); // flashcard, quiz, list, dashboard
-            const [selectedCategory, setSelectedCategory] = useState('全部');
+        // 1. 計算預打藥量 (體重 * 0.14)
+        const predoseElem = document.getElementById('predose');
+        if (!isNaN(weight)) {
+            const predose = weight * 0.14;
+            predoseElem.innerText = predose.toFixed(2);
+        } else {
+            predoseElem.innerText = '-';
+        }
+
+        // 2. 計算實打藥量 (打藥前 - 打藥後)
+        const actualDoseElem = document.getElementById('actualDose');
+        const minus10Elem = document.getElementById('minus10');
+        const plus20Elem = document.getElementById('plus20');
+
+        if (!isNaN(beforeDose) && !isNaN(afterDose)) {
+            const actualDose = beforeDose - afterDose;
+            actualDoseElem.innerText = actualDose.toFixed(2);
+
+            // 計算 -10% 與 20%
+            const m10 = actualDose * 0.9;  // 實打藥量扣掉 10%
+            const p20 = actualDose * 1.2;  // 實打藥量增加 20% (或根據您需求調整，若是指總量可自行微調公式)
             
-            // 記憶庫狀態
-            const [masteredIds, setMasteredIds] = useState(() => {
-                const saved = localStorage.getItem('ct_mastered_ids');
-                return saved ? JSON.parse(saved) : [];
-            });
+            minus10Elem.innerText = m10.toFixed(2);
+            plus20Elem.innerText = p20.toFixed(2);
+        } else {
+            actualDoseElem.innerText = '-';
+            minus10Elem.innerText = '-';
+            plus20Elem.innerText = '-';
+        }
+    }
 
-            // 測驗紀錄
-            const [quizStats, setQuizStats] = useState(() => {
-                const saved = localStorage.getItem('ct_quiz_stats');
-                return saved ? JSON.parse(saved) : { totalQuestions: 0, correctAnswers: 0, history: [] };
-            });
+    function clearAll() {
+        document.getElementById('weight').value = '';
+        document.getElementById('beforeDose').value = '';
+        document.getElementById('afterDose').value = '';
+        document.getElementById('predose').innerText = '-';
+        document.getElementById('actualDose').innerText = '-';
+        document.getElementById('minus10').innerText = '-';
+        document.getElementById('plus20').innerText = '-';
+    }
+</script>
 
-            useEffect(() => {
-                localStorage.setItem('ct_mastered_ids', JSON.stringify(masteredIds));
-            }, [masteredIds]);
-
-            useEffect(() => {
-                localStorage.setItem('ct_quiz_stats', JSON.stringify(quizStats));
-            }, [quizStats]);
-
-            const categories = useMemo(() => {
-                return ['全部', ...new Set(rawData.map(item => item.category))];
-            }, []);
-
-            const filteredData = useMemo(() => {
-                if (selectedCategory === '全部') return rawData;
-                return rawData.filter(item => item.category === selectedCategory);
-            }, [selectedCategory]);
-
-            const toggleMastered = (id) => {
-                setMasteredIds(prev => 
-                    prev.includes(id) ? prev.filter(mid => mid !== id) : [...prev, id]
-                );
-            };
-
-            return (
-                <div className="h-full w-full flex flex-col bg-slate-50 text-slate-800 select-none">
-                    {/* 頂部導航列 */}
-                    <header className="bg-white border-b border-slate-200 px-4 py-3 flex justify-between items-center shrink-0 shadow-sm z-10">
-                        <div className="flex items-center space-x-2">
-                            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-md shadow-indigo-200">
-                                💡
-                            </div>
-                            <div>
-                                <h1 className="text-base font-bold text-slate-900 leading-tight">NotebookLM</h1>
-                                <p className="text-xs text-indigo-600 font-medium tracking-wide">放射醫學記憶國度</p>
-                            </div>
-                        </div>
-                        
-                        {/* 類別快速篩選 */}
-                        <div className="flex items-center">
-                            <select 
-                                value={selectedCategory} 
-                                onChange={(e) => setSelectedCategory(e.target.value)}
-                                className="text-xs bg-slate-100 border-none rounded-full py-1.5 px-3 font-medium text-slate-700 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-                            >
-                                {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                            </select>
-                        </div>
-                    </header>
-
-                    {/* 主內容區塊 */}
-                    <main className="flex-1 overflow-y-auto no-scrollbar p-4 pb-24">
-                        {activeTab === 'flashcard' && (
-                            <FlashcardSection data={filteredData} masteredIds={masteredIds} toggleMastered={toggleMastered} />
-                        )}
-                        {activeTab === 'quiz' && (
-                            <QuizSection data={filteredData} setQuizStats={setQuizStats} />
-                        )}
-                        {activeTab === 'list' && (
-                            <ListSection data={filteredData} masteredIds={masteredIds} toggleMastered={toggleMastered} />
-                        )}
-                        {activeTab === 'dashboard' && (
-                            <DashboardSection rawData={rawData} masteredIds={masteredIds} quizStats={quizStats} setQuizStats={setQuizStats} setMasteredIds={setMasteredIds} />
-                        )}
-                    </main>
-
-                    {/* 底部導航欄 */}
-                    <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-2 flex justify-around items-center shadow-lg z-20">
-                        <button 
-                            onClick={() => setActiveTab('flashcard')}
-                            className={`flex flex-col items-center space-y-1 py-1 px-3 rounded-xl transition-all duration-200 ${activeTab === 'flashcard' ? 'text-indigo-600 font-semibold scale-105' : 'text-slate-400 font-medium'}`}
-                        >
-                            <span className="text-xl">🎴</span>
-                            <span className="text-[10px]">記憶卡</span>
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('quiz')}
-                            className={`flex flex-col items-center space-y-1 py-1 px-3 rounded-xl transition-all duration-200 ${activeTab === 'quiz' ? 'text-indigo-600 font-semibold scale-105' : 'text-slate-400 font-medium'}`}
-                        >
-                            <span className="text-xl">✍️</span>
-                            <span className="text-[10px]">模擬測驗</span>
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('list')}
-                            className={`flex flex-col items-center space-y-1 py-1 px-3 rounded-xl transition-all duration-200 ${activeTab === 'list' ? 'text-indigo-600 font-semibold scale-105' : 'text-slate-400 font-medium'}`}
-                        >
-                            <span className="text-xl">📋</span>
-                            <span className="text-[10px]">題庫總覽</span>
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('dashboard')}
-                            className={`flex flex-col items-center space-y-1 py-1 px-3 rounded-xl transition-all duration-200 ${activeTab === 'dashboard' ? 'text-indigo-600 font-semibold scale-105' : 'text-slate-400 font-medium'}`}
-                        >
-                            <span className="text-xl">📊</span>
-                            <span className="text-[10px]">數據分析</span>
-                        </button>
-                    </nav>
-                </div>
+</body>
+</html>
