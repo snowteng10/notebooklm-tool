@@ -209,14 +209,14 @@
     
     <div class="btn-container">
         <button class="btn-success" onclick="exportToExcel()">📥 下載完整多筆 Excel 總表</button>
-        <button class="btn-secondary" onclick="clearAll()">清除重置</button>
+        <button class="btn-secondary" onclick="clearAll()">清除重置（換下一位）</button>
     </div>
 </div>
 
 <script>
     // 儲存累積紀錄的陣列
     let multiRecords = [];
-    let currentRecordId = null; // 用來追蹤目前正在編輯的這一筆資料
+    let currentRecordId = null;
 
     // 警報聲音提示 (Web Audio API)
     function playBeep(isTooMuch) {
@@ -295,11 +295,9 @@
                 };
 
                 if (currentRecordId === null) {
-                    // 新增一筆
                     multiRecords.push(recordData);
                     currentRecordId = multiRecords.length - 1;
                 } else {
-                    // 更新當前正在編輯的這一筆（修改數值時會同步更新，避免重複堆疊）
                     multiRecords[currentRecordId] = recordData;
                 }
 
@@ -343,24 +341,3 @@
 
         // 產生檔案並下載
         const now = new Date();
-        const fileName = `PET_Dose_Summary_${now.toISOString().slice(0,10)}.xlsx`;
-        XLSX.writeFile(workbook, fileName);
-    }
-
-    function clearAll() {
-        document.getElementById('weight').value = '';
-        document.getElementById('beforeDose').value = '';
-        document.getElementById('afterDose').value = '';
-        document.getElementById('predose').innerText = '-';
-        document.getElementById('actualDose').innerText = '-';
-        document.getElementById('minus10').innerText = '-';
-        document.getElementById('plus20').innerText = '-';
-        document.getElementById('alertBox').style.display = 'none';
-        
-        // 重置當前編輯指標，準備迎接下一位病患的全新紀錄
-        currentRecordId = null;
-    }
-</script>
-
-</body>
-</html>
