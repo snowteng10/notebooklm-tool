@@ -40,26 +40,23 @@
             text-align: center;
             font-size: 20px;
         }
-        th {
-            background-color: #2d3748;
-            color: #ffffff;
-            font-weight: bold;
-            font-size: 22px;
-        }
-        th.red-header {
-            background-color: #9b2c2c;
-            color: #ffffff;
-        }
         
-        /* 依需求指定的底色 */
-        .bg-blue {
-            background-color: #ebf8ff !important; /* 體重欄：藍色 */
+        /* 上層格子（標題欄位）的指定底色與深色字體以確保清晰 */
+        th.th-blue {
+            background-color: #bee3f8 !important; /* 體重欄標題：藍色 */
+            color: #1a365d;
         }
-        .bg-yellow {
-            background-color: #fefcbf !important; /* 預打藥、打藥前、打藥後：黃色 */
+        th.th-yellow {
+            background-color: #fefcbf !important; /* 預打藥量、打藥前、打藥後標題：黃色 */
+            color: #744210;
         }
-        .bg-orange {
-            background-color: #feebc8 !important; /* 實打藥量：醒目橘色 */
+        th.th-orange {
+            background-color: #feebc8 !important; /* 實打藥量標題：橘色 */
+            color: #7b341e;
+        }
+        th.th-range {
+            background-color: #fed7d7 !important; /* -10% 與 +20% 範圍標題：柔和紅 */
+            color: #9b2c2c;
         }
 
         td input {
@@ -72,7 +69,7 @@
             font-size: 24px;
             font-weight: bold;
             color: #2d3748;
-            background-color: inherit;
+            background-color: #ffffff;
         }
         td input:focus {
             border-color: #3182ce;
@@ -88,6 +85,7 @@
             font-weight: bold;
             font-size: 24px;
             color: #2b6cb0;
+            background-color: #fff5f5;
         }
         .alert-box {
             padding: 18px;
@@ -137,30 +135,30 @@
     <table>
         <thead>
             <tr>
-                <th>體重 (kg)</th>
-                <th>預打藥量 <br><small style="font-size:15px; color:#edf2f7;">(體重 × 0.14)</small>[cite: 1]</th>
-                <th>打藥前</th>
-                <th>打藥後</th>
-                <th>實打藥量 <br><small style="font-size:15px; color:#edf2f7;">(打藥前 − 打藥後)</small></th>
-                <th class="red-header">-10% 範圍</th>
-                <th class="red-header">+20% 範圍</th>
+                <th class="th-blue">體重 (kg)</th>
+                <th class="th-yellow">預打藥量 <br><small style="font-size:15px; font-weight:normal;">(體重 × 0.14)</small>[cite: 1]</th>
+                <th class="th-yellow">打藥前</th>
+                <th class="th-yellow">打藥後</th>
+                <th class="th-orange">實打藥量 <br><small style="font-size:15px; font-weight:normal;">(打藥前 − 打藥後)</small></th>
+                <th class="th-range">-10% 範圍</th>
+                <th class="th-range">+20% 範圍</th>
             </tr>
         </thead>
         <tbody>
             <tr>
-                <td class="bg-blue">
+                <td>
                     <input type="number" id="weight" placeholder="輸入體重" oninput="calculate()">
                 </td>
-                <td class="bg-yellow">
+                <td>
                     <span id="predose">-</span>
                 </td>
-                <td class="bg-yellow">
+                <td>
                     <input type="number" id="beforeDose" placeholder="打藥前" oninput="calculate()">
                 </td>
-                <td class="bg-yellow">
+                <td>
                     <input type="number" id="afterDose" placeholder="打藥後" oninput="calculate()">
                 </td>
-                <td class="bg-orange">
+                <td>
                     <span id="actualDose">-</span>
                 </td>
                 <td class="range-val" id="minus10">-</td>
