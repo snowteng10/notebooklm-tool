@@ -341,3 +341,24 @@
 
         // 產生檔案並下載
         const now = new Date();
+        const fileName = `PET_Dose_Summary_${now.toISOString().slice(0,10)}.xlsx`;
+        XLSX.writeFile(workbook, fileName);
+    }
+
+    function clearAll() {
+        document.getElementById('weight').value = '';
+        document.getElementById('beforeDose').value = '';
+        document.getElementById('afterDose').value = '';
+        document.getElementById('predose').innerText = '-';
+        document.getElementById('actualDose').innerText = '-';
+        document.getElementById('minus10').innerText = '-';
+        document.getElementById('plus20').innerText = '-';
+        document.getElementById('alertBox').style.display = 'none';
+        
+        // 重置指標，讓下一位病患輸入時能正確建立新的一筆資料，同時保留已累積的總筆數
+        currentRecordId = null;
+    }
+</script>
+
+</body>
+</html>
