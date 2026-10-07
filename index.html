@@ -214,32 +214,41 @@
 </div>
 
 <script>
-    // 儲存累積紀錄的陣列
     let multiRecords = [];
     let currentRecordId = null;
 
-    // 警報聲音提示 (Web Audio API)
+    // 警報聲音提示 (使用 Web Audio API，無需外接音檔)
     function playBeep(isTooMuch) {
         try {
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const audioCtx = new AudioContext();
+
+            // 若音效被瀏覽器暫停，嘗試解鎖
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
             const oscillator = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
             
             oscillator.type = 'sine';
             if (isTooMuch) {
-                oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
-                oscillator.frequency.setValueAtTime(1000, audioCtx.currentTime + 0.15);
+                // 太多：高頻急促音
+                oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+                oscillator.frequency.setValueAtTime(1100, audioCtx.currentTime + 0.12);
             } else {
-                oscillator.frequency.setValueAtTime(500, audioCtx.currentTime);
-                oscillator.frequency.setValueAtTime(400, audioCtx.currentTime + 0.15);
+                // 太少：低頻沉穩音
+                oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
+                oscillator.frequency.setValueAtTime(330, audioCtx.currentTime + 0.12);
             }
             
-            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gainNode.gain.setValueAtTime(0.4, audioCtx.currentTime);
             oscillator.connect(gainNode);
             gainNode.connect(audioCtx.destination);
             
             oscillator.start();
-            oscillator.stop(audioCtx.currentTime + 0.4);
+            oscillator.stop(audioCtx.currentTime + 0.35);
         } catch (e) {
             console.log("音效播放失敗", e);
         }
@@ -280,7 +289,7 @@
             minus10Elem.innerText = m10.toFixed(2);
             plus20Elem.innerText = p20.toFixed(2);
 
-            // 當輸入完整且計算完成時，自動默默記錄到背景清單
+            // 自動累積至背景紀錄
             if (!isNaN(weight) && !isNaN(beforeDose) && !isNaN(afterDose) && !isNaN(actualDose)) {
                 const now = new Date().toLocaleString('zh-TW');
                 const recordData = {
@@ -309,12 +318,12 @@
                     alertBox.className = 'alert-box alert-too-much';
                     alertBox.innerText = '⚠️ 警告：實打藥量【太多】，已超出 +20% 上限範圍！';
                     alertBox.style.display = 'block';
-                    playBeep(true);
+                    playBeep(true);  // 播放太多警示音
                 } else if (actualDose < m10) {
                     alertBox.className = 'alert-box alert-too-less';
                     alertBox.innerText = '⚠️ 注意：實打藥量【太少】，低於 -10% 下限範圍！';
                     alertBox.style.display = 'block';
-                    playBeep(false);
+                    playBeep(false); // 播放太少警示音
                 } else {
                     alertBox.style.display = 'none';
                 }
@@ -334,12 +343,10 @@
             return;
         }
 
-        // 建立工作表
         const worksheet = XLSX.utils.json_to_sheet(multiRecords);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "PET打藥總表");
 
-        // 產生檔案並下載
         const now = new Date();
         const fileName = `PET_Dose_Summary_${now.toISOString().slice(0,10)}.xlsx`;
         XLSX.writeFile(workbook, fileName);
@@ -355,7 +362,6 @@
         document.getElementById('plus20').innerText = '-';
         document.getElementById('alertBox').style.display = 'none';
         
-        // 重置指標，讓下一位病患輸入時能正確建立新的一筆資料，同時保留已累積的總筆數
         currentRecordId = null;
     }
 </script>
